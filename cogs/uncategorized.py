@@ -1,6 +1,8 @@
 
 from discord.ext import commands
-import time,random,requests,math,discord
+import time,random,requests,discord,bs4,math
+
+__all__=["Uncategorized"]
 
 class Uncategorized(commands.Cog):
     @commands.command()
@@ -123,6 +125,72 @@ class Uncategorized(commands.Cog):
         embed.set_image(url=image)
 
         await context.send(embed=embed)
+
+    # TODO: Jobban nekifeküdni, és néhány ellenőrzést hozzáadni.
+    @commands.command(aliases=["ph"])
+    @commands.cooldown(1,15,commands.BucketType.user)
+    async def pornhub(self,context,*,tags:str=""):
+        if not context.channel.is_nsfw():
+            await context.send("ℹ | Ezt a parancsot csak NSFW csatornákban működik.")
+            return
+        if not tags:
+            await context.send("ℹ | Nem adtál meg keresőszavakat.")
+            return
+
+        url="https://pornhub.com/"
+        params={"search":""}
+        headers={
+            "User-Agent": "User-Agent/1.0.0 (Discord Bot)",
+            "Content-Type" : "text/html; charset=UTF-8"
+        }
+        keywords = tags.split(" ")
+        categories = []
+        for keyword in keywords:
+            if keyword in ("female", "gay", "male", "misc", "straight", "transgender", "uncategorizedd"):
+                categories.append(keyword)
+            else:
+                params["search"]+=keyword+"+"
+
+        navigate_to=url+"albums/"+"-".join(categories)
+        print(params)
+        response = requests.get(navigate_to,params=params,headers=headers)
+        if response.status_code != 200:
+            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
+            return
+        data=bs4.BeautifulSoup(response.content,"lxml")
+        number_of_albums=data.find("div",class_="showingCounter").get_text().rsplit(" ",1)[1]
+        number_of_pages=math.ceil(int(number_of_albums)/36)
+        params["page"]=random.randint(1,number_of_pages)
+
+        # Moving to a random page...
+        response = requests.get(navigate_to, params=params, headers=headers)
+        if response.status_code != 200:
+            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
+            return
+        data = bs4.BeautifulSoup(response.content, "lxml")
+        albums=data.find_all("div",{"class":"photoAlbumListBlock"})
+        album=random.choice(albums)
+        navigate_to=url+str(album.find("a")["href"][1:])
+
+        # Inside the album
+        response = requests.get(navigate_to, headers=headers)
+        if response.status_code != 200:
+            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
+            return
+        data = bs4.BeautifulSoup(response.content, "lxml")
+        images=data.find_all("div",{"class":"photoAlbumListBlock"})
+        image=random.choice(images)
+        image=image.find("a")["href"]
+        navigate_to=url+image
+
+        # Getting the photo...
+        response = requests.get(navigate_to, headers=headers)
+        if response.status_code != 200:
+            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
+            return
+        data=bs4.BeautifulSoup(response.content,"lxml")
+        url=data.find("a",{"href":str(image)}).find("img")
+        await context.send(url.attrs["src"])
 
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
