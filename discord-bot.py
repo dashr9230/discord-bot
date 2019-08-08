@@ -15,6 +15,19 @@ def main():
     if token == "":
         print("discord-bot.cfg konfigurációs fájl nem található vagy token kulcs hiányzik.")
         return
+
+    for cog in os.listdir("cogs"):
+        if not cog.endswith(".py"):
+            continue
+        cog = cog[:-3]
+        try:
+            bot.load_extension(f"cogs.{cog}")
+            print(f"\"{cog}\" modul sikeresen betöltve.")
+        except commands.NoEntryPointError:
+            print(f"Belépési pont nem található \"{cog}\" modulban.")
+        except commands.ExtensionFailed as i:
+            print(f"Hiba lépett fel \"{cog}\" modul lefuttatása közben.\n{i}")
+
     bot.run(token)
 
 main()
