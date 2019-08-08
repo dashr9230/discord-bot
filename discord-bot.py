@@ -8,6 +8,11 @@ bot=commands.Bot(command_prefix="!")
 async def on_ready():
     print(f"A bot elindult {bot.user.name} néven. (ID:{bot.user.id})")
 
+@bot.event
+async def on_command_error(context,error):
+    if isinstance(error,commands.CommandOnCooldown):
+        return
+
 def main():
     config=configparser.ConfigParser()
     config.read("discord-bot.dev.cfg" if os.path.isfile("discord-bot.dev.cfg") else "discord-bot.cfg")
