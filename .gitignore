@@ -121,3 +121,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore that .idea folder
+.idea/
+
+# and ignore my config file, pls
+discord-bot.dev.cfg
