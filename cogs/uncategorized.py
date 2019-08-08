@@ -192,5 +192,50 @@ class Uncategorized(commands.Cog):
         url=data.find("a",{"href":str(image)}).find("img")
         await context.send(url.attrs["src"])
 
+    @commands.command(aliases=["fur","fa"])
+    @commands.cooldown(1,15,commands.BucketType.user)
+    async def furaffinity(self,context,*,tags:str=""):
+        if not tags:
+            await context.send("Nem adtál meg keresőszavakat.")
+            return
+        url="https://www.furaffinity.net/search"
+        headers={"User-Agent": "User-Agent/1.0.0 (Discord Bot)"}
+        params={"q":tags}
+        # TODO: configból kiolvasni a bejelentkező adatokat
+        # TODO: NSFW ellenőrzés szükséges miután a bejelentkező adatok ki vannak töltve
+        data={"username":"","password":""}
+
+        # Get number of images
+        response=requests.get(url,params=params,headers=headers,data=data,timeout=10)
+        if response.status_code != 200:
+            await context.send("Furaffinity nem elérhető")
+            return
+
+        content=bs4.BeautifulSoup(response.content,"lxml")
+        result=content.find("fieldset",{"id":"search-results"}).find("legend").get_text()
+        start=result.find("of ")+3
+        max_finds=result[start : result.find(")",start)]
+        if max_finds == "0":
+            await context.send("Nincs találat a keresőszavakra.")
+            return
+        params["page"]=random.randint(1,math.ceil(int(max_finds)/48))
+
+        # Grab some photo in that page
+        response=requests.get(url,params=params,headers=headers,data=data,timeout=10)
+        if response.status_code != 200:
+            await context.send("Furaffinity nem elérhető")
+            print(response.status_code)
+            return
+
+        content = bs4.BeautifulSoup(response.content, "lxml")
+        figure=content.find_all("figure")
+        if not figure:
+            await context.send("Hiba lépett fel keresés közben.")
+            return
+        image=random.choice(figure)
+        image=image.find("b").find("u").find("a").attrs["href"]
+
+        await context.send(f"https://www.furaffinity.net{image}")
+
 def setup(bot):
     bot.add_cog(Uncategorized(bot))

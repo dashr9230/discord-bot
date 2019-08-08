@@ -11,6 +11,7 @@ async def on_ready():
 @bot.event
 async def on_command_error(context,error):
     if isinstance(error,commands.CommandOnCooldown):
+        await context.send("cooldown!")
         return
 
 def main():
