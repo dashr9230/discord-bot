@@ -1,6 +1,8 @@
 
 from discord.ext import commands
-import time,random,requests,discord,bs4,math
+from . import utils
+
+import time,random,requests,discord,bs4,math,re,asyncio
 
 __all__=["Uncategorized"]
 
@@ -126,71 +128,91 @@ class Uncategorized(commands.Cog):
 
         await context.send(embed=embed)
 
-    # TODO: Jobban nekifeküdni, és néhány ellenőrzést hozzáadni.
     @commands.command(aliases=["ph"])
-    @commands.cooldown(1,15,commands.BucketType.user)
-    async def pornhub(self,context,*,tags:str=""):
+    async def pornhub(self, context, *, keywords: str = ""):
+        time_left=utils.is_on_cooldown(context, 15)
+        if time_left != -1:
+            await context.send(f"ℹ | Whoa, nyugi cowboy! Próbáld meg újra **{time_left} másodperc** múlva.")
+            return
         if not context.channel.is_nsfw():
-            await context.send("ℹ | Ezt a parancsot csak NSFW csatornákban működik.")
-            return
-        if not tags:
-            await context.send("ℹ | Nem adtál meg keresőszavakat.")
+            await context.send("ℹ | Ez a parancs csak NSFW csatornákban működik.")
             return
 
-        url="https://pornhub.com/"
-        params={"search":""}
-        headers={
-            "User-Agent": "User-Agent/1.0.0 (Discord Bot)",
-            "Content-Type" : "text/html; charset=UTF-8"
-        }
-        keywords = tags.split(" ")
-        categories = []
-        for keyword in keywords:
-            if keyword in ("female", "gay", "male", "misc", "straight", "transgender", "uncategorizedd"):
-                categories.append(keyword)
-            else:
-                params["search"]+=keyword+"+"
+        segments = []
+        tags = []
+        verified = False
+        order = ""
+        if keywords:
+            keywords = keywords.lower()
+            for keyword in keywords.split(" "):
+                if keyword in ["seg:female","seg:gay","seg:male","seg:straight"]:
+                    segments.append(keyword[4:])
+                elif keyword in ["seg:transgender","seg:trans"]:
+                    segments.append("transgender")
+                elif keyword in ["seg:miscellaneous","seg:misc"]:
+                    segments.append("misc")
+                elif keyword == "verified":
+                    verified = True
+                elif keyword in ["o:mv","o:most_viewed"]:
+                    order = "mv"
+                elif keyword in ["o:mr", "o:most_recent"]:
+                    order = "mr"
+                elif keyword in ["o:tr","o:top_rated"]:
+                    order = "tr"
+                else:
+                    tags.append(keyword)
 
-        navigate_to=url+"albums/"+"-".join(categories)
-        print(params)
-        response = requests.get(navigate_to,params=params,headers=headers)
-        if response.status_code != 200:
-            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
-            return
-        data=bs4.BeautifulSoup(response.content,"lxml")
-        number_of_albums=data.find("div",class_="showingCounter").get_text().rsplit(" ",1)[1]
-        number_of_pages=math.ceil(int(number_of_albums)/36)
-        params["page"]=random.randint(1,number_of_pages)
+        url = "https://www.pornhub.com/albums/"
+        params = {}
 
-        # Moving to a random page...
-        response = requests.get(navigate_to, params=params, headers=headers)
-        if response.status_code != 200:
-            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
-            return
-        data = bs4.BeautifulSoup(response.content, "lxml")
-        albums=data.find_all("div",{"class":"photoAlbumListBlock"})
-        album=random.choice(albums)
-        navigate_to=url+str(album.find("a")["href"][1:])
+        if not segments:
+            segments.append("female")
+            segments.append("straight")
+            segments.append("uncategorized")
+        if tags:
+            params["search"] = "+".join(tags)
+        if order:
+            params["o"] = order
+        if verified:
+            params["verified"] = "1"
 
-        # Inside the album
-        response = requests.get(navigate_to, headers=headers)
-        if response.status_code != 200:
-            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
-            return
-        data = bs4.BeautifulSoup(response.content, "lxml")
-        images=data.find_all("div",{"class":"photoAlbumListBlock"})
-        image=random.choice(images)
-        image=image.find("a")["href"]
-        navigate_to=url+image
+        message = await context.send(f"🔍 | **Pornhub** | Keresés következőre: ***{keywords}***")
 
-        # Getting the photo...
-        response = requests.get(navigate_to, headers=headers)
-        if response.status_code != 200:
-            await context.send("ℹ | Pornhub jelenleg nem elérhető. Próbáld meg később.")
+        content = utils.xget(url + "-".join(segments), params)
+        if content == None:
+            await message.edit(content=f"ℹ | **Pornhub** | Hiba merült fel album keresés közben.")
             return
-        data=bs4.BeautifulSoup(response.content,"lxml")
-        url=data.find("a",{"href":str(image)}).find("img")
-        await context.send(url.attrs["src"])
+
+        album_contents = content.find_all("div",{"class":"photoAlbumListBlock"})
+        if not album_contents:
+            await message.edit(content=f"ℹ | **Pornhub** | Nincs album találat.")
+            return
+        album_content = random.choice(album_contents)
+        album_link = url[:23] + album_content.find("a")["href"]
+
+        content = utils.xget(album_link)
+        if content == None:
+            await message.edit(content=f"ℹ | **Pornhub** | Hiba merült fel kép keresése közben.")
+            return
+
+        photo_contents = content.find_all("div",{"class":"photoAlbumListBlock"})
+        if not photo_contents:
+            await message.edit(content=f"ℹ | **Pornhub** | Nincs fotó találat.")
+            return
+        photo_content = random.choice(photo_contents)
+
+        album_title, owner = content.title.string.split(" - ")
+        owner = owner.split("'")[0]
+        title = f"Pornhub # {owner} Albuma"
+        photo_link = photo_content.find("a")["href"]
+        photo_url = photo_content.attrs["style"][23:-3]
+
+        embed = discord.Embed(title="Megtekintés teljes méretben",
+            url=url[:23]+photo_link,colour=0xFF9900,description=album_title)
+        embed.set_author(name=title,url=album_link)
+        embed.set_image(url=photo_url)
+
+        await message.edit(content=None, embed=embed)
 
     @commands.command(aliases=["fur","fa"])
     @commands.cooldown(1,15,commands.BucketType.user)
