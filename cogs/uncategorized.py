@@ -315,5 +315,42 @@ class Uncategorized(commands.Cog):
 
         await context.send(embed=embed)
 
+    @commands.command(aliases=["yt"])
+    async def youtube(self, context, *, keywords: str = ""):
+        time_left = utils.is_on_cooldown(context, 15)
+        if time_left != -1:
+            await context.send(f"Lassan öcskös! Újra próbálhatod **{time_left}** mp múlva.")
+            return
+        if not keywords:
+            await context.send("Nem adtál meg keresési kulcsokat.")
+            return
+
+        query = []
+        sp = "CAASAhAB"
+        for keyword in keywords.split(" "):
+            if not keyword:
+                continue
+            if keyword in ["sort_by:d","sort_by:date","sort_by:upload_date"]:
+                sp = "CAISAhAB"
+            elif keyword in ["sort_by:v","sort_by:views","sort_by:view_count"]:
+                sp = "CAMSAhAB"
+            elif keyword in ["sort_by:r","sort_by:rates","sort_by:rating"]:
+                sp = "CAESAhAB"
+            else:
+                query.append(keyword)
+
+        url = "https://www.youtube.com/results"
+        params = {"search_query":" ".join(query), "sp": sp}
+
+        content = utils.xget(url, params)
+        if content == None:
+            await context.send("Hiba lépett fel videó keresése közben.")
+            return
+
+        thumbnail_div = content.find("div",{"class":"yt-lockup-thumbnail contains-addto"})
+        thumbnail_a = thumbnail_div.find("a",{"aria-hidden":"true","class":"yt-uix-sessionlink spf-link"})
+
+        await context.send(url[:23] + thumbnail_a["href"])
+
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
