@@ -26,3 +26,6 @@ def is_on_cooldown(context,retry_after:float):
         del commands[command]
         return -1
     return int(retry_after-(now-commands[command]))
+
+def remstr(source, start, end):
+    pass

@@ -259,5 +259,61 @@ class Uncategorized(commands.Cog):
 
         await context.send(f"https://www.furaffinity.net{image}")
 
+    @commands.command(aliases=["dan"])
+    async def danbooru(self, context, *, keywords: str = ""):
+        time_left = utils.is_on_cooldown(context, 15)
+        if time_left != -1:
+            await context.send(f"Nyugi öcskös! **{time_left}** másodperc múlva újra használhatod.")
+            return
+
+        url = "https://danbooru.donmai.us"
+        params = {}
+
+        if keywords:
+            keywords = keywords.lower()
+            nsfw = context.channel.is_nsfw()
+            tags = [] if nsfw else ["rating:safe"]
+            for keyword in keywords.split(" "):
+                if not nsfw and not keyword.startswith("rating:") \
+                        and not keyword.startswith("-rating:"):
+                    tags.append(keyword)
+            params["tags"] = " ".join(tags)
+        else:
+            url += "/posts/random"
+            if not context.channel.is_nsfw():
+                params["tags"] = "rating:safe"
+
+        content = utils.xget(url, params)
+        if content == None:
+            await context.send("Hiba lépett fel poszt keresése közben.")
+            return
+
+        if keywords:
+            posts_container = content.find("div",{"id":"posts-container"})
+            articles = posts_container.find_all("article")
+            if not articles:
+                await context.send("Nincs találat?")
+                return
+            image = random.choice(articles)
+        else:
+            image = content.find("section",{"id": "image-container"})
+
+        id = image["data-id"]
+        title = "Danbooru # " + id
+        url = url[:26] + "/posts/" + id
+        favs = image["data-fav-count"]
+        score = image["data-score"]
+        ext = image["data-file-ext"]
+        size = image["data-width"] + "x" + image["data-height"]
+        rating = image["data-rating"]
+
+        embed = discord.Embed(title=title,color=0x0073FF,url=url)
+        embed.add_field(name="Kedvencek", value=favs)
+        embed.add_field(name="Pontok", value=score)
+        embed.set_footer(text="Méret %s | Fájltípus: %s | Osztályozás: %s" % (size, ext, rating))
+        embed.set_image(url=image["data-large-file-url"])
+
+        await context.send(embed=embed)
+
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
