@@ -27,5 +27,9 @@ def is_on_cooldown(context,retry_after:float):
         return -1
     return int(retry_after-(now-commands[command]))
 
-def remstr(source, start, end):
-    pass
+def has_permission(member, permission: str):
+    for role in member.roles:
+        attr = getattr(role.permissions, permission, None)
+        if attr != None and attr == True:
+            return True
+    return False

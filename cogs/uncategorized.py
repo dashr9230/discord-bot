@@ -352,5 +352,19 @@ class Uncategorized(commands.Cog):
 
         await context.send(url[:23] + thumbnail_a["href"])
 
+    @commands.command()
+    async def purge(self, context, limit: str = ""):
+        if not utils.has_permission(context.author, "manage_messages"):
+            await context.send("Nincs jogod üzenetek törléséhez.")
+            return
+        if not limit and not limit.isnumeric():
+            await context.send("Nem adtál meg számot, amennyit törölni szeretnél.")
+            return
+
+        try:
+            await context.channel.purge(limit=int(limit))
+        except:
+            await context.send("Hiba merült fel üzenetek törlése közben.")
+
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
