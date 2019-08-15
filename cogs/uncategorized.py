@@ -5,7 +5,7 @@
 # TODO: Add ability to log out bot
 # TODO: Add ability to change command prefix
 # TODO: Add Sims(?) game
-# TODO: Add ban and kick command
+# TODO: Add kick command
 
 from discord.ext import commands
 from . import utils
@@ -417,6 +417,38 @@ class Uncategorized(commands.Cog):
             await webhook.send(message)
 
         await context.send("Köszönjük jelentésed!")
+
+    @commands.command()
+    async def ban(self, context, *, name: str = ""):
+        if not utils.has_permission(context.author, "ban_members"):
+            await context.send("Nincs jogod a ban parancs használatára.")
+            return
+        if not name:
+            await context.send("Nem adtál meg nevet.")
+            return
+        member = utils.find_member(context, name)
+        if member == None:
+            await context.send(f"Nem találtam **{name}** nevű tagot.")
+            return
+
+        await member.ban()
+        await context.send(f"**{member.name}** ki lett tilva a szerverről.")
+
+    @commands.command()
+    async def unban(self, context, *, name: str = ""):
+        if not utils.has_permission(context.author, "ban_members"):
+            await context.send("Nincs jogod az unban parancs használatára.")
+            return
+        if not name:
+            await context.send("Nem adtál meg nevet.")
+            return
+        member = utils.find_member(context, name)
+        if member == None:
+            await context.send(f"Nem találtam **{name}** nevű tagot.")
+            return
+
+        await member.unban()
+        await context.send(f"**{member.name}** kitiltása feloldva.")
 
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
