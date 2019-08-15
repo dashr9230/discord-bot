@@ -1,6 +1,5 @@
 
 # TODO: Add ability to move messages to another channel
-# TODO: Add report command
 # TODO: Add multilanguage support
 # TODO: Add music player
 # TODO: Add ability to log out bot
@@ -11,7 +10,7 @@
 from discord.ext import commands
 from . import utils
 
-import time,random,requests,discord,bs4,math
+import time,random,requests,discord,bs4,math,aiohttp
 
 __all__=["Uncategorized"]
 
@@ -401,6 +400,23 @@ class Uncategorized(commands.Cog):
             await context.send(f"Törölve lett {count} üzenet {member.name}-tól/-től.")
         except:
             await context.send("Hiba merült fel üzenetek törlése közben.")
+
+    @commands.command()
+    async def report(self, context, *, message: str = ""):
+        if not message:
+            await context.send("Nem adtál meg üzenetet.")
+            return
+        # TODO: Read the webhook url from config
+        url = ""
+        if not url:
+            await context.send("Report parancs jelenleg nem elérhető.")
+            return
+
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(url, adapter=discord.AsyncWebhookAdapter(session))
+            await webhook.send(message)
+
+        await context.send("Köszönjük jelentésed!")
 
 def setup(bot):
     bot.add_cog(Uncategorized(bot))
