@@ -1,8 +1,17 @@
 
+# TODO: Add ability to move messages to another channel
+# TODO: Add report command
+# TODO: Add multilanguage support
+# TODO: Add music player
+# TODO: Add ability to log out bot
+# TODO: Add ability to change command prefix
+# TODO: Add Sims(?) game
+# TODO: Add ban and kick command
+
 from discord.ext import commands
 from . import utils
 
-import time,random,requests,discord,bs4,math,re,asyncio
+import time,random,requests,discord,bs4,math
 
 __all__=["Uncategorized"]
 
@@ -357,12 +366,39 @@ class Uncategorized(commands.Cog):
         if not utils.has_permission(context.author, "manage_messages"):
             await context.send("Nincs jogod üzenetek törléséhez.")
             return
-        if not limit and not limit.isnumeric():
-            await context.send("Nem adtál meg számot, amennyit törölni szeretnél.")
+        if not limit and not limit.isnumeric() and (0 > int(limit) <= 100):
+            await context.send("Nem adtál meg számot, amennyit törölni szeretnél. (1-100)")
             return
-
         try:
             await context.channel.purge(limit=int(limit))
+        except:
+            await context.send("Hiba merült fel üzenetek törlése közben.")
+
+    @commands.command()
+    async def prune(self, context, *, message: str = ""):
+        if not utils.has_permission(context.author, "manage_messages"):
+            await context.send("Nincs jogod üzenetek törléséhez.")
+            return
+        if not message:
+            await context.send("Nem adtál meg számot és nevet akinek az üzeneteit törölni szeretnéd.")
+            return
+        limit, name = message.split(" ", 1)
+        if not limit.isnumeric() and (0 > int(limit) <= 100):
+            await context.send("A szám nem lehet 1-nél kisebb és 100-nál nagyobb.")
+            return
+        member = utils.find_member(context, name)
+        if member == None:
+            await context.send(f"Nem találtam **{name}** nevű felhasználót.")
+            return
+        try:
+            count = 0
+            async for m in context.channel.history(limit=100):
+                if m.author == member:
+                    await m.delete()
+                    count += 1
+                if int(limit) <= count:
+                    break
+            await context.send(f"Törölve lett {count} üzenet {member.name}-tól/-től.")
         except:
             await context.send("Hiba merült fel üzenetek törlése közben.")
 

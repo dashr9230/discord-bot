@@ -33,3 +33,18 @@ def has_permission(member, permission: str):
         if attr != None and attr == True:
             return True
     return False
+
+def find_member(context, name: str, case_sensitive = False):
+    cs = case_sensitive
+    name = name if cs else name.lower()
+    for m in context.guild.members:
+        d = [str(m.id)]
+        if m.nick:
+            d.append(m.nick)
+        d.append(m.name if cs else m.name.lower())
+        d.append(m.display_name if cs else m.display_name.lower())
+        d.append(m.mention)
+        for i in d:
+            if i.find(name) != -1:
+                return m
+    return None
