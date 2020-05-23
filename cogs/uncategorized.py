@@ -16,6 +16,44 @@ __all__=["Uncategorized"]
 
 class Uncategorized(commands.Cog):
     @commands.command()
+    async def eqd(self, context):
+        url = "https://www.equestriadaily.com"
+
+        response = requests.get(url)
+        if response.status_code != 200:
+            await context.send("Equestria Daily jelenleg nem elérhető.")
+            return
+        content = bs4.BeautifulSoup(response.text,"lxml")
+
+        blog_post = content.find("li", {"class": "blog-post"})
+        if not blog_post:
+            #await context.send("Nem találtam posztot...")
+            print("Nincs poszt találat.")
+            return
+
+        title = blog_post.find("h3", {"class":"post-title"})
+        title_url = title.find("a").attrs["href"]
+        author = blog_post.find("a",{"class":"g-profile"})
+        description = blog_post.find("div", {"class":"post-body"})
+        image_meta = blog_post.find("meta", {"itemprop":"image_url"})
+        image_url = image_meta.attrs["content"]
+
+        #print(title,title_url)
+        #title =
+        #description =
+        #description = description.text.strip()
+        #image =
+        #image = image.attrs["content"]
+        #full_news = f"**{title.text.strip()}**{description}\n{image}"
+        #await context.send(full_news)
+
+        embed = discord.Embed(colour=discord.Color(0x800080), title=title.text, url=title_url,
+                              description=description.text.strip())
+        embed.set_image(url=image_url)
+        embed.set_footer(text=f"Posztolta: {author.text}")
+        await context.send(embed=embed)
+        
+    @commands.command()
     async def ping(self,context):
         start=time.time()
         message=await context.send("ℹ | Ping?")
