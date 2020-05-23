@@ -14,7 +14,46 @@ import time,random,requests,discord,bs4,math,aiohttp
 
 __all__=["Uncategorized"]
 
+def find_member_by_name(context, name):
+    name = name.lower()
+    for member in context.message.guild.members:
+        id = str(member.id)
+        nickname = str(member.nick.lower()) if member.nick != None else ""
+        username = str(member.name.lower())
+        displayname = str(member.display_name.lower())  
+        if name in id or name in nickname or name in username or name in displayname:
+            return member
+    return None
+
 class Uncategorized(commands.Cog):
+    @commands.command()
+    async def pm(self, context, name: str = "", *message: str):
+        # TODO: hozzáadni azt hogy botnak ne küldjön, és saját magának.
+        if not name:
+            await context.send("Nem adtál meg tagot.")
+            return
+        member = find_member_by_name(context, name)
+        if member is None:
+            await context.send(f"Nem találtam **{name}** nevű tagot.")
+            return
+
+        await context.send(f"Biztosan el szeretnéd küldeni az üzenetet **{member.name}** számára?\nKüldj 'igen'-t az üzenet továbbításhoz.")
+        
+        def check(message):
+            return message.content.lower() == "igen"
+
+        dm = member.dm_channel if member.dm_channel != None else await member.create_dm()
+
+        try:
+            msg = await self.bot.wait_for('message', timeout=30.0, check=check)
+            if msg.author == member:
+                await dm.send(content=" ".join(message))
+                await context.send("👌")
+            else:
+                await context.send(f"Neked nincs jogod arra hogy válaszolj erre az üzenetre, **{msg.author}**")
+        except asyncio.TimeoutError:
+            await context.send(f"Az üzenet törlésre került.")
+
     @commands.command()
     async def chrissy(self, context, *, message: str = ""):
         member = context.author if not message else utils.find_member_by_name(context,message)
