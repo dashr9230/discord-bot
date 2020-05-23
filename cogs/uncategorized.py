@@ -10,7 +10,7 @@
 from discord.ext import commands
 from . import utils
 
-import time,random,requests,discord,bs4,math,aiohttp
+import time,random,requests,discord,bs4,math,aiohttp,hashlib
 
 __all__=["Uncategorized"]
 
@@ -26,6 +26,25 @@ def find_member_by_name(context, name):
     return None
 
 class Uncategorized(commands.Cog):
+    @commands.command()
+    async def hash(self, context, *, text: str=""):
+        if not text:
+            await context.send("Nem adtál meg szöveget hashelésre.")
+            return
+
+        def to_leet(m):
+            l={"a":"4","b":"8","e":"3","g":"9","i":"1",
+               "o":"0","s":"5","t":"7","z":"2"}
+            for k,v in l.items():
+                m.replace(k,v)
+            for i,c in enumerate(m):
+                m[i] = c.lower() if bool(random.getrandbits(1)) else c.upper()
+            return m
+        message=f"Hashelésre kért szöveg: *{text}*\n"
+        message+=f"**1337:** {to_leet(text)}\n"
+        message+=f"**sha224:** {hashlib.sha224(text).hexdigest()}\n"
+        await context.send(message)
+
     @commands.command()
     async def pm(self, context, name: str = "", *message: str):
         # TODO: hozzáadni azt hogy botnak ne küldjön, és saját magának.
