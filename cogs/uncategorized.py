@@ -16,6 +16,32 @@ __all__=["Uncategorized"]
 
 class Uncategorized(commands.Cog):
     @commands.command()
+    async def chrissy(self, context, *, message: str = ""):
+        member = context.author if not message else utils.find_member_by_name(context,message)
+
+        filename = f"cache/{context.author.id}.png"
+        handle = open(filename, "wb")
+        if handle:
+            content = requests.get(member.avatar_url, stream=True).content
+            handle.write(content)
+            handle.close()
+
+        image = PIL.Image.new("RGBA", (1000,1414))
+        
+        chrissy = PIL.Image.open("assets/chrissy.png")
+        avatar = PIL.Image.open(filename)
+
+        avatar = PIL.ImageOps.fit(avatar,(550,550),PIL.Image.ANTIALIAS)
+        
+        image.paste(avatar,(240,800))
+        image.paste(chrissy,(0,0),chrissy)
+        image.save(filename)
+
+        await context.send(file=discord.File(filename))
+
+        os.remove(filename)
+        
+    @commands.command()
     async def eqd(self, context):
         url = "https://www.equestriadaily.com"
 
