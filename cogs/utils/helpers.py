@@ -48,3 +48,14 @@ def find_member(context, name: str, case_sensitive = False):
             if i.find(name) != -1:
                 return m
     return None
+    
+def find_member_by_name(context, name):
+    name = name.lower()
+    for member in context.message.guild.members:
+        id = str(member.id)
+        nickname = str(member.nick.lower()) if member.nick != None else ""
+        username = str(member.name.lower())
+        displayname = str(member.display_name.lower())  
+        if name in id or name in nickname or name in username or name in displayname:
+            return member
+    return None
